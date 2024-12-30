@@ -150,7 +150,6 @@ fn main() -> Result<(), io::Error> {
 
         if let Event::Key(key) = event::read()? {
             match key.code {
-                KeyCode::Char(' ') => app.page_down(height),
                 KeyCode::Up => app.scroll_up(),
                 KeyCode::Down => app.scroll_down(height),
                 KeyCode::PageUp => app.page_up(height),
@@ -173,8 +172,12 @@ fn main() -> Result<(), io::Error> {
                 KeyCode::Backspace if app.is_searching => {
                     app.search_pattern.pop();
                 },
-                KeyCode::Char(c) if app.is_searching => {
-                    app.search_pattern.push(c);
+                KeyCode::Char(c) => {
+                    if key.code == KeyCode::Char(' ') && !app.is_searching {
+                        app.page_down(height);
+                    } else if app.is_searching {
+                        app.search_pattern.push(c);
+                    }
                 },
                 _ => {}
             }
@@ -211,7 +214,7 @@ fn draw_logs(app: &App, f: &mut tui::Frame<CrosstermBackend<io::Stdout>>, size: 
                 if app.is_searching {
                     format!("Search: {}_", app.search_pattern)
                 } else {
-                    format!("Rails Log Viewer - {}", app.get_status_text())
+                    format!("Log Viewer - {}", app.get_status_text())
                 }
             ));
 
@@ -245,7 +248,6 @@ fn parse_log_line(line: &str) -> Option<LogEntry> {
                 code.push(c);
             }
             
-            // ANSIコードをTUIのスタイルに変換
             current_style = match code.as_str() {
                 "31" => Style::default().fg(Color::Red),
                 "32" => Style::default().fg(Color::Green),
